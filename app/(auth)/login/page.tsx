@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithGoogle } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, authError } = useAuth();
   const router = useRouter();
+  const [signing, setSigning] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -16,18 +18,32 @@ export default function LoginPage() {
     }
   }, [user, role, loading, router]);
 
+  const error = localError ?? authError;
+
   async function handleSignIn() {
+    setSigning(true);
+    setLocalError(null);
     try {
+      // signInWithRedirect navigates away — no need to setSigning(false)
       await signInWithGoogle();
-    } catch (err) {
-      console.error("Sign in failed:", err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Sign in failed. Please try again.";
+      console.error("[Login] Sign in error:", err);
+      setLocalError(msg);
+      setSigning(false);
     }
   }
 
-  if (loading) {
+  // Show spinner while checking auth state OR while redirect is in progress
+  if (loading || signing) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <p className="text-sm text-muted-foreground">
+            {signing ? "Redirecting to Google…" : "Loading…"}
+          </p>
+        </div>
       </div>
     );
   }
@@ -52,6 +68,14 @@ export default function LoginPage() {
               Sign in with your team&apos;s Google account
             </p>
           </div>
+
+          {/* Auth error — shown prominently so it's visible */}
+          {error && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <p className="font-medium">Sign in failed</p>
+              <p className="mt-0.5 text-xs opacity-80 break-all">{error}</p>
+            </div>
+          )}
 
           <Button
             onClick={handleSignIn}
