@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { signOut } from "@/lib/auth";
@@ -9,16 +10,18 @@ export default function HomePage() {
   const { user, role } = useAuth();
   const router = useRouter();
 
-  // Executives have their own dashboard
-  if (role === "executive") {
-    router.replace("/executive/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (role === "executive") {
+      router.replace("/executive/dashboard");
+    }
+  }, [role, router]);
 
   async function handleSignOut() {
     await signOut();
     router.replace("/login");
   }
+
+  if (role === "executive") return null;
 
   return (
     <div className="min-h-screen bg-background">
