@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Zap,
   BookOpen,
-  Award,
   Compass,
   Trophy,
   ChevronRight,
@@ -27,8 +26,10 @@ export default function HomePage() {
   const router = useRouter();
 
   const [activeQuests, setActiveQuests] = useState<Quest[]>([]);
+  const [allQuests, setAllQuests] = useState<Quest[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [fullLeaderboard, setFullLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -46,8 +47,10 @@ export default function HomePage() {
           getSubmissionsByTeam(user!.uid),
           fetchLeaderboard(),
         ]);
+        setAllQuests(quests);
         setActiveQuests(quests.slice(0, 5));
         setSubmissions(subs);
+        setFullLeaderboard(lb);
         setLeaderboard(lb.slice(0, 5));
       } catch (err) {
         console.error("Home data load error:", err);
@@ -71,14 +74,17 @@ export default function HomePage() {
     returned: { label: "ส่งคืน", color: "bg-red-100 text-red-600", icon: RotateCcw },
   } as const;
 
-  const allLeaderboard = leaderboard;
-  const myRank = user ? allLeaderboard.findIndex((t) => t.uid === user.uid) + 1 : 0;
+  const myRank = user ? fullLeaderboard.findIndex((t) => t.uid === user.uid) + 1 : 0;
+  const pendingCount = allQuests.filter((q) => {
+    const sub = subMap.get(q.id);
+    return !sub || sub.status === "returned";
+  }).length;
 
   const stats = [
-    { icon: Zap, label: "XP สะสม", value: `${(user?.xp ?? 0).toLocaleString()} XP`, color: "text-yellow-500", bg: "bg-yellow-50" },
-    { icon: BookOpen, label: "เควสต์สำเร็จ", value: `${submissions.filter((s) => s.status === "approved").length} ภารกิจ`, color: "text-blue-500", bg: "bg-blue-50" },
-    { icon: Award, label: "เหรียญตรา", value: `${user?.badges?.length ?? 0} เหรียญ`, color: "text-purple-500", bg: "bg-purple-50" },
-    { icon: Trophy, label: "อันดับทีม", value: myRank > 0 ? `#${myRank}` : "—", color: "text-[#274897]", bg: "bg-[#274897]/10" },
+    { icon: Zap,     label: "XP สะสม",      value: `${(user?.xp ?? 0).toLocaleString()} XP`,                        color: "text-yellow-500", bg: "bg-yellow-50" },
+    { icon: BookOpen, label: "เควสต์สำเร็จ", value: `${submissions.filter((s) => s.status === "approved").length} ภารกิจ`, color: "text-blue-500",   bg: "bg-blue-50" },
+    { icon: Compass,  label: "ยังไม่ได้ทำ",   value: `${pendingCount} ภารกิจ`,                                          color: "text-amber-500",  bg: "bg-amber-50" },
+    { icon: Trophy,   label: "อันดับทีม",     value: myRank > 0 ? `#${myRank}` : "—",                                 color: "text-[#274897]",  bg: "bg-[#274897]/10" },
   ];
 
   return (
