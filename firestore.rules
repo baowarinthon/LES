@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isExecutive() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'executive';
+    }
+
+    function isAdminOrExecutive() {
+      return isAdmin() || isExecutive();
+    }
+
+    // users collection
+    match /users/{uid} {
+      // Own doc: full read. Others: only non-sensitive fields (handled client-side).
+      allow read: if isAuth() && (request.auth.uid == uid || isAdminOrExecutive());
+      // Own doc: update teamName and memberNames only
+      allow update: if isAuth() && request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['teamName', 'memberNames']);
+      // Admin can write all fields (XP, badges, role)
+      allow write: if isAdmin();
+      // New user doc created on first login
+      allow create: if isAuth() && request.auth.uid == uid;
+    }
+
+    // quests collection
+    match /quests/{questId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // submissions collection
+    match /submissions/{submissionId} {
+      // Own team can read their submissions
+      allow read: if isAuth() && (
+        resource.data.teamId == request.auth.uid ||
+        resource.data.status == 'approved' ||
+        isAdminOrExecutive()
+      );
+      // Own team can create and update their pending submission
+      allow create: if isAuth() && request.resource.data.teamId == request.auth.uid;
+      allow update: if isAuth() && (
+        (resource.data.teamId == request.auth.uid && resource.data.status == 'pending') ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // badges collection
+    match /badges/{badgeId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+  }
+}
