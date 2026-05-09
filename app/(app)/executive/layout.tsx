@@ -8,11 +8,13 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   const { role, loading } = useAuth();
   const router = useRouter();
 
+  const allowed = role === "executive" || role === "admin";
+
   useEffect(() => {
-    if (!loading && role !== "executive") {
+    if (!loading && !allowed) {
       router.replace("/home");
     }
-  }, [role, loading, router]);
+  }, [allowed, loading, router]);
 
   if (loading) {
     return (
@@ -22,7 +24,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (role !== "executive") return null;
+  if (!allowed) return null;
 
   return <>{children}</>;
 }

@@ -10,10 +10,15 @@ export interface User {
   xp: number;
   badges: string[];
   memberNames: string[];
+  airport?: string;
+  profileImageUrl?: string;
+  onboardingComplete?: boolean;
   createdAt: Timestamp;
 }
 
 export type QuestStatus = "draft" | "active" | "closed";
+
+export type RewardType = "digital" | "physical" | "recognition";
 
 export interface Quest {
   id: string;
@@ -22,10 +27,20 @@ export interface Quest {
   requirements: string;
   xpReward: number;
   badgeReward: string | null;
+  thumbnailUrl: string | null;
+  driveFileId: string | null;
+  driveFileUrl: string | null;
   status: QuestStatus;
   deadline: Timestamp | null;
   createdBy: string;
+  createdByName: string;
   createdAt: Timestamp;
+  rewardType?: RewardType | null;
+  rewardTitle?: string | null;
+  rewardDescription?: string | null;
+  rewardImageUrl?: string | null;
+  driveFolderId?: string | null;
+  driveFolderUrl?: string | null;
 }
 
 export type SubmissionStatus = "pending" | "approved" | "returned";
@@ -45,6 +60,11 @@ export interface Submission {
   submittedAt: Timestamp;
   reviewedAt: Timestamp | null;
   reviewedBy: string | null;
+  reviewedByName: string | null;
+  questTitle?: string;
+  rewardStatus?: "pending" | "delivered" | null;
+  rewardNote?: string | null;
+  driveWebViewLink?: string | null;
 }
 
 export interface Badge {

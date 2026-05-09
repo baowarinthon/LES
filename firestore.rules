@@ -1,67 +1,46 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuth() {
-      return request.auth != null;
+    match /users/{userId} {
+      // Any authenticated user can read user docs (required for leaderboard)
+      allow read: if request.auth != null;
+      // User can write their own doc; admin can write any doc
+      allow write: if request.auth != null && (
+        request.auth.uid == userId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
-    function isAdmin() {
-      return isAuth() &&
+    match /quests/{questId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function isExecutive() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'executive';
-    }
-
-    function isAdminOrExecutive() {
-      return isAdmin() || isExecutive();
-    }
-
-    // users collection
-    match /users/{uid} {
-      // Own doc: full read. Others: only non-sensitive fields (handled client-side).
-      allow read: if isAuth() && (request.auth.uid == uid || isAdminOrExecutive());
-      // Own doc: update teamName and memberNames only
-      allow update: if isAuth() && request.auth.uid == uid &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['teamName', 'memberNames']);
-      // Admin can write all fields (XP, badges, role)
-      allow write: if isAdmin();
-      // New user doc created on first login
-      allow create: if isAuth() && request.auth.uid == uid;
-    }
-
-    // quests collection
-    match /quests/{questId} {
-      allow read: if isAuth();
-      allow write: if isAdmin();
-    }
-
-    // submissions collection
     match /submissions/{submissionId} {
-      // Own team can read their submissions
-      allow read: if isAuth() && (
+      allow read: if request.auth != null && (
         resource.data.teamId == request.auth.uid ||
         resource.data.status == 'approved' ||
-        isAdminOrExecutive()
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'executive'
       );
-      // Own team can create and update their pending submission
-      allow create: if isAuth() && request.resource.data.teamId == request.auth.uid;
-      allow update: if isAuth() && (
-        (resource.data.teamId == request.auth.uid && resource.data.status == 'pending') ||
-        isAdmin()
+      allow create: if request.auth != null && request.resource.data.teamId == request.auth.uid;
+      allow update: if request.auth != null && (
+        resource.data.teamId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
-      allow delete: if isAdmin();
     }
 
-    // badges collection
     match /badges/{badgeId} {
-      allow read: if isAuth();
-      allow write: if isAdmin();
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /stats/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

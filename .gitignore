@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Firebase deploy cache
+.firebase/
+
 # dependencies
 /node_modules
 /.pnp
@@ -40,3 +43,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Firebase cache
+.firebase/
+
+# Node modules
+node_modules/
+functions/node_modules/
+
+# Next.js build
+.next/
+out/
+
+# Environment
+.env.local
+.env

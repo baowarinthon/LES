@@ -1,6 +1,12 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
+} from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -14,5 +20,19 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+let db: ReturnType<typeof getFirestore>;
+try {
+  db =
+    typeof window !== "undefined"
+      ? initializeFirestore(app, {
+          localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({ forceOwnership: false }) }),
+        })
+      : getFirestore(app);
+} catch {
+  db = getFirestore(app);
+}
+export { db };
+
+export const storage = getStorage(app);
 export default app;

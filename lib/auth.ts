@@ -1,7 +1,6 @@
 import {
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   type User as FirebaseUser,
@@ -13,10 +12,10 @@ import type { UserRole } from "@/types";
 const googleProvider = new GoogleAuthProvider();
 
 export function signInWithGoogle() {
-  return signInWithRedirect(auth, googleProvider);
+  return signInWithPopup(auth, googleProvider);
 }
 
-export { getRedirectResult, auth };
+export { auth };
 
 export function signOut() {
   return firebaseSignOut(auth);
