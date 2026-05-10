@@ -180,7 +180,7 @@ export default function LandingPage() {
             <span className="text-gray-400 text-sm">Rise of Learners</span>
           </div>
           <p className="text-xs text-gray-400">
-            &copy; 2025 Airports of Thailand. All rights reserved.
+            &copy; 2026 Airports of Thailand. All rights reserved.
           </p>
         </div>
       </footer>
