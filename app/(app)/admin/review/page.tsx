@@ -11,15 +11,17 @@ import type { Quest, Submission, SubmissionStatus } from "@/types";
 import { cn } from "@/lib/utils";
 
 type Toast = { type: "success" | "error"; message: string };
-type Tab = SubmissionStatus;
+type Tab = "all" | SubmissionStatus;
 
 const TAB_LABELS: Record<Tab, string> = {
+  all: "ทั้งหมด",
   pending: "รอตรวจ",
   approved: "ผ่านแล้ว",
   returned: "ส่งคืน",
 };
 
 const TAB_COLORS: Record<Tab, string> = {
+  all: "text-gray-600",
   pending: "text-orange-500",
   approved: "text-emerald-500",
   returned: "text-red-500",
@@ -124,14 +126,17 @@ function AdminReviewContent() {
 
   // Filter by tab AND selected quest
   const filtered = submissions
-    .filter((s) => s.status === tab)
+    .filter((s) => tab === "all" || s.status === tab)
     .filter((s) => !selectedQuestId || s.questId === selectedQuestId);
 
   // Tab counts respect the quest filter
+  const byQuest = (status?: SubmissionStatus) =>
+    submissions.filter((s) => (!status || s.status === status) && (!selectedQuestId || s.questId === selectedQuestId)).length;
   const counts: Record<Tab, number> = {
-    pending: submissions.filter((s) => s.status === "pending" && (!selectedQuestId || s.questId === selectedQuestId)).length,
-    approved: submissions.filter((s) => s.status === "approved" && (!selectedQuestId || s.questId === selectedQuestId)).length,
-    returned: submissions.filter((s) => s.status === "returned" && (!selectedQuestId || s.questId === selectedQuestId)).length,
+    all:      byQuest(),
+    pending:  byQuest("pending"),
+    approved: byQuest("approved"),
+    returned: byQuest("returned"),
   };
 
   // Dropdown shows only quests that have at least one submission
@@ -210,10 +215,10 @@ function AdminReviewContent() {
     }
   }
 
-  const tabs: Tab[] = ["pending", "approved", "returned"];
+  const tabs: Tab[] = ["all", "pending", "approved", "returned"];
 
   async function handleExportCSV() {
-    const STATUS_TH: Record<Tab, string> = { pending: "รอตรวจ", approved: "ผ่านแล้ว", returned: "ส่งคืน" };
+    const STATUS_TH: Record<Tab, string> = { all: "ทั้งหมด", pending: "รอตรวจ", approved: "ผ่านแล้ว", returned: "ส่งคืน" };
     const allUsers = await getAllUsers();
     const userMap = new Map(allUsers.map((u) => [u.uid, u]));
 
@@ -318,6 +323,12 @@ function AdminReviewContent() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-4">
+            {(tab === "all") && (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <div className="rounded-full bg-gray-100 p-4"><ClipboardCheck size={28} className="text-gray-400" /></div>
+                <p className="text-base font-medium text-gray-600">ยังไม่มีการส่งงาน</p>
+              </div>
+            )}
             {tab === "pending" && (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <div className="rounded-full bg-gray-100 p-4"><CheckCircle2 size={28} className="text-gray-400" /></div>
@@ -418,7 +429,7 @@ function AdminReviewContent() {
                       );
                     })()}
                   </div>
-                  {tab === "pending" && (
+                  {sub.status === "pending" && (
                     <div className="flex gap-2 shrink-0">
                       <button
                         type="button"
@@ -438,7 +449,7 @@ function AdminReviewContent() {
                       </button>
                     </div>
                   )}
-                  {tab === "approved" && questMap[sub.questId]?.rewardType && (
+                  {sub.status === "approved" && questMap[sub.questId]?.rewardType && (
                     sub.rewardStatus === "delivered" ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 shrink-0">
                         <PackageCheck size={12} />
