@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   BookOpen,
   ClipboardCheck,
-  Award,
   Users,
   ArrowLeft,
 } from "lucide-react";
@@ -18,7 +17,6 @@ const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "ภาพรวม", href: "/admin" },
   { icon: BookOpen, label: "จัดการเควสต์", href: "/admin/quests" },
   { icon: ClipboardCheck, label: "ตรวจงาน", href: "/admin/review" },
-  { icon: Award, label: "จัดการรางวัล", href: "/admin/rewards" },
   { icon: Users, label: "จัดการผู้ใช้", href: "/admin/users" },
 ];
 

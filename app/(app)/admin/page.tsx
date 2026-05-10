@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, BookOpen, ClipboardCheck, Award, Zap, RefreshCw } from "lucide-react";
+import { Users, BookOpen, ClipboardCheck, Zap, RefreshCw } from "lucide-react";
 import {
   getAllUsers,
   getSubmissionStats,
@@ -65,7 +65,6 @@ export default function AdminPage() {
   const quickActions = [
     { icon: BookOpen, label: "จัดการเควสต์", href: "/admin/quests", color: "text-blue-600", bg: "bg-blue-50 hover:bg-blue-100" },
     { icon: ClipboardCheck, label: "ตรวจงาน", href: "/admin/review", color: "text-orange-600", bg: "bg-orange-50 hover:bg-orange-100" },
-    { icon: Award, label: "จัดการรางวัล", href: "/admin/rewards", color: "text-purple-600", bg: "bg-purple-50 hover:bg-purple-100" },
     { icon: Users, label: "จัดการผู้ใช้", href: "/admin/users", color: "text-gray-600", bg: "bg-gray-50 hover:bg-gray-100" },
   ];
 
