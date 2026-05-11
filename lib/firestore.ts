@@ -16,7 +16,7 @@ import {
   arrayUnion,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { User, UserRole, Quest, QuestStatus, Submission, SubmissionStatus } from "@/types";
+import type { User, UserRole, UserStatus, Quest, QuestStatus, Submission, SubmissionStatus } from "@/types";
 
 export async function getUser(uid: string): Promise<User | null> {
   const snap = await getDoc(doc(db, "users", uid));
@@ -24,12 +24,16 @@ export async function getUser(uid: string): Promise<User | null> {
   return snap.data() as User;
 }
 
+const WHITELIST = ["project@aotsles.com"];
+
 export async function createUser(uid: string, email: string): Promise<void> {
+  const status: UserStatus = WHITELIST.includes(email) ? "approved" : "pending";
   await setDoc(doc(db, "users", uid), {
     uid,
     email,
     teamName: email.split("@")[0],
     role: "employee",
+    status,
     xp: 0,
     badges: [],
     memberNames: [],
@@ -39,6 +43,10 @@ export async function createUser(uid: string, email: string): Promise<void> {
     createdAt: serverTimestamp(),
   });
   updatePublicStats().catch(console.error);
+}
+
+export async function updateUserStatus(uid: string, status: UserStatus): Promise<void> {
+  await updateDoc(doc(db, "users", uid), { status });
 }
 
 export async function updateUser(uid: string, data: Partial<User>): Promise<void> {

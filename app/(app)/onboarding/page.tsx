@@ -11,13 +11,12 @@ import { uploadProfileImage } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 const AIRPORTS = [
-  "สุวรรณภูมิ",
-  "ดอนเมือง",
-  "ภูเก็ต",
-  "เชียงใหม่",
-  "หาดใหญ่",
-  "กระบี่",
-  "สมุย",
+  "ท่าอากาศยานสุวรรณภูมิ",
+  "ท่าอากาศยานดอนเมือง",
+  "ท่าอากาศยานภูเก็ต",
+  "ท่าอากาศยานหาดใหญ่",
+  "ท่าอากาศยานเชียงรายแม่ฟ้าหลวง",
+  "ท่าอากาศยานเชียงใหม่",
 ];
 
 // TOTAL_STEPS is computed per-role inside the component

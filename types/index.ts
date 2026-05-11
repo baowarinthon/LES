@@ -2,11 +2,14 @@ import { Timestamp } from "firebase/firestore";
 
 export type UserRole = "employee" | "admin" | "executive" | "super_admin";
 
+export type UserStatus = "pending" | "approved" | "rejected";
+
 export interface User {
   uid: string;
   email: string;
   teamName: string;
   role: UserRole;
+  status: UserStatus;
   xp: number;
   badges: string[];
   memberNames: string[];

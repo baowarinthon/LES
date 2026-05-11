@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -10,20 +10,14 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { updatePublicStats } from "@/lib/firestore";
+import { getAllUsers, updatePublicStats } from "@/lib/firestore";
 import { cn } from "@/lib/utils";
-
-const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "ภาพรวม", href: "/admin" },
-  { icon: BookOpen, label: "จัดการเควสต์", href: "/admin/quests" },
-  { icon: ClipboardCheck, label: "ตรวจงาน", href: "/admin/review" },
-  { icon: Users, label: "จัดการผู้ใช้", href: "/admin/users" },
-];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { role, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [pendingCount, setPendingCount] = useState(0);
 
   const isAdmin = role === "admin" || role === "super_admin";
 
@@ -32,6 +26,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.replace("/home");
     }
   }, [isAdmin, loading, router]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    getAllUsers()
+      .then((users) => {
+        const count = users.filter((u) => (u.status ?? "approved") === "pending").length;
+        setPendingCount(count);
+      })
+      .catch(console.error);
+  }, [isAdmin]);
 
   if (loading) {
     return (
@@ -46,6 +50,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Sync public landing page stats once per admin session
   updatePublicStats().catch(console.error);
 
+  const NAV_ITEMS = [
+    { icon: LayoutDashboard, label: "ภาพรวม", href: "/admin", badge: 0 },
+    { icon: BookOpen, label: "จัดการเควสต์", href: "/admin/quests", badge: 0 },
+    { icon: ClipboardCheck, label: "ตรวจงาน", href: "/admin/review", badge: 0 },
+    { icon: Users, label: "จัดการผู้ใช้", href: "/admin/users", badge: pendingCount },
+  ];
+
   return (
     <div className="flex flex-1 bg-gray-50">
       {/* ── Sidebar (desktop) ── */}
@@ -56,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="flex flex-1 flex-col gap-0.5 p-3">
-          {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
+          {NAV_ITEMS.map(({ icon: Icon, label, href, badge }) => {
             const active = pathname === href;
             return (
               <button
@@ -71,7 +82,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 )}
               >
                 <Icon size={16} />
-                {label}
+                <span className="flex-1 text-left">{label}</span>
+                {badge > 0 && (
+                  <span className={cn(
+                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold",
+                    active ? "bg-white text-[#274897]" : "bg-red-500 text-white",
+                  )}>
+                    {badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -95,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Mobile bottom tabs */}
         <nav className="flex border-t bg-white lg:hidden">
-          {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
+          {NAV_ITEMS.map(({ icon: Icon, label, href, badge }) => {
             const active = pathname === href;
             return (
               <button
@@ -103,11 +122,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 type="button"
                 onClick={() => router.push(href)}
                 className={cn(
-                  "flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+                  "relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
                   active ? "text-[#274897]" : "text-gray-400 hover:text-gray-600",
                 )}
               >
-                <Icon size={18} />
+                <span className="relative">
+                  <Icon size={18} />
+                  {badge > 0 && (
+                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">
+                      {badge}
+                    </span>
+                  )}
+                </span>
                 <span className="truncate max-w-[52px] text-center leading-tight">{label}</span>
               </button>
             );

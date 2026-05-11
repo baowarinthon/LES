@@ -6,9 +6,11 @@ import { useAuth } from "@/lib/auth-context";
 import { AppNavbar } from "@/components/shared/AppNavbar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  const isPrivileged = role === "admin" || role === "super_admin";
 
   useEffect(() => {
     if (loading) return;
@@ -22,8 +24,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     if (!user.onboardingComplete) {
       router.replace("/onboarding");
+      return;
     }
-  }, [user, loading, router, pathname]);
+
+    // Status check — admins bypass
+    if (!isPrivileged) {
+      const status = user.status ?? "approved"; // existing users without field default to approved
+      if (status === "pending") {
+        router.replace("/pending");
+        return;
+      }
+      if (status === "rejected") {
+        router.replace("/rejected");
+        return;
+      }
+    }
+  }, [user, role, loading, router, pathname, isPrivileged]);
 
   if (loading) {
     return (
@@ -38,6 +54,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (pathname === "/onboarding") return <>{children}</>;
 
   if (!user.onboardingComplete) return null;
+
+  // Block render while redirecting pending/rejected
+  if (!isPrivileged) {
+    const status = user.status ?? "approved";
+    if (status === "pending" || status === "rejected") return null;
+  }
 
   const isAdminArea = pathname.startsWith("/admin") || pathname.startsWith("/executive");
 
