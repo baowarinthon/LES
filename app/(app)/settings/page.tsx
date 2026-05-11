@@ -6,7 +6,7 @@ import { ArrowLeft, Camera, User, Save, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
-import { updateUser } from "@/lib/firestore";
+import { syncUserProfile } from "@/lib/firestore";
 import { uploadProfileImage } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
@@ -82,7 +82,7 @@ export default function SettingsPage() {
         setUploadProgress(null);
         setPendingFile(null);
       }
-      await updateUser(user.uid, {
+      await syncUserProfile(user.uid, {
         teamName: teamName.trim() || user.teamName,
         airport,
         memberNames: members.map((m) => m.trim()).filter(Boolean),

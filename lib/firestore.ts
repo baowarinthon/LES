@@ -53,6 +53,25 @@ export async function updateUser(uid: string, data: Partial<User>): Promise<void
   await updateDoc(doc(db, "users", uid), data as Record<string, unknown>);
 }
 
+// Batch-update user doc + all their submissions (teamName, airport, profileImageUrl)
+export async function syncUserProfile(
+  uid: string,
+  data: { teamName: string; airport: string; memberNames: string[]; profileImageUrl: string },
+): Promise<void> {
+  const batch = writeBatch(db);
+
+  batch.update(doc(db, "users", uid), data);
+
+  const subsSnap = await getDocs(
+    query(collection(db, "submissions"), where("teamId", "==", uid)),
+  );
+  subsSnap.docs.forEach((d) => {
+    batch.update(d.ref, { teamName: data.teamName, airport: data.airport });
+  });
+
+  await batch.commit();
+}
+
 export async function getAllUsers(): Promise<User[]> {
   const snap = await getDocs(collection(db, "users"));
   return snap.docs.map((d) => d.data() as User);
