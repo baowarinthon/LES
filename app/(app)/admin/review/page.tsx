@@ -245,7 +245,7 @@ function AdminReviewContent() {
         esc(s.xpAwarded),
         esc(fmt(s.submittedAt)),
         esc(fmt(s.reviewedAt)),
-        esc(s.reviewedByName),
+        esc(s.reviewedBy ? (reviewerProfiles.get(s.reviewedBy)?.teamName ?? s.reviewedByName) : s.reviewedByName),
         esc(s.driveFileUrl),
         esc(s.feedback ?? s.rewardNote ?? ""),
       ].join(",");
