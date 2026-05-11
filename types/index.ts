@@ -44,6 +44,7 @@ export interface Quest {
   rewardImageUrl?: string | null;
   driveFolderId?: string | null;
   driveFolderUrl?: string | null;
+  prerequisiteQuestId?: string | null;
 }
 
 export type SubmissionStatus = "pending" | "approved" | "returned";

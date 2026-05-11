@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Upload, CheckCircle2, FileText, X, BookOpen } from "lucide-react";
 import { SubmissionPreview } from "@/components/shared/SubmissionPreview";
 import { useAuth } from "@/lib/auth-context";
-import { getQuest, createSubmission } from "@/lib/firestore";
+import { getQuest, createSubmission, getSubmissionsByTeam } from "@/lib/firestore";
 import { uploadSubmissionFile } from "@/lib/storage";
 import type { Quest } from "@/types";
 import { Timestamp } from "firebase/firestore";
@@ -57,13 +57,33 @@ function SubmitForm() {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isPrivileged = role === "admin" || role === "super_admin";
+
   useEffect(() => {
-    if (!questId) { setLoading(false); return; }
-    getQuest(questId)
-      .then(setQuest)
-      .catch(() => setError("ไม่พบภารกิจนี้"))
-      .finally(() => setLoading(false));
-  }, [questId]);
+    if (!questId || !user) { setLoading(false); return; }
+    async function load() {
+      try {
+        const [q, subs] = await Promise.all([
+          getQuest(questId),
+          getSubmissionsByTeam(user!.uid),
+        ]);
+        if (!q) { setError("ไม่พบภารกิจนี้"); return; }
+        // Lock check
+        if (!isPrivileged && q.prerequisiteQuestId) {
+          const prereqMet = subs.some(
+            (s) => s.questId === q.prerequisiteQuestId && s.status === "approved",
+          );
+          if (!prereqMet) { router.replace("/quests"); return; }
+        }
+        setQuest(q);
+      } catch {
+        setError("ไม่พบภารกิจนี้");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [questId, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => { if (filePreview) URL.revokeObjectURL(filePreview); };

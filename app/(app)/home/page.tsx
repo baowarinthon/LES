@@ -75,9 +75,16 @@ export default function HomePage() {
   } as const;
 
   const myRank = user ? fullLeaderboard.findIndex((t) => t.uid === user.uid) + 1 : 0;
+  const isPrivileged = role === "admin" || role === "super_admin";
+  const approvedQuestIds = new Set(
+    submissions.filter((s) => s.status === "approved").map((s) => s.questId),
+  );
   const pendingCount = allQuests.filter((q) => {
     const sub = subMap.get(q.id);
-    return !sub || sub.status === "returned";
+    if (sub && sub.status !== "returned") return false;
+    // Exclude locked quests from "ยังไม่ได้ทำ" count
+    if (!isPrivileged && q.prerequisiteQuestId && !approvedQuestIds.has(q.prerequisiteQuestId)) return false;
+    return true;
   }).length;
 
   const stats = [

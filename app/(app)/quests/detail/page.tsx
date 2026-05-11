@@ -70,7 +70,7 @@ function HeroImage({ thumbnailUrl, title, statusLabel }: { thumbnailUrl: string 
 }
 
 function QuestDetail() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const questId = searchParams.get("id") ?? "";
@@ -80,6 +80,8 @@ function QuestDetail() {
   const [loading, setLoading] = useState(true);
   const [creatorProfile, setCreatorProfile] = useState<UserPublicProfile | null>(null);
   const [reviewerProfile, setReviewerProfile] = useState<UserPublicProfile | null>(null);
+
+  const isPrivileged = role === "admin" || role === "super_admin";
 
   useEffect(() => {
     if (!user || !questId) return;
@@ -92,6 +94,17 @@ function QuestDetail() {
         setQuest(q);
         const sub = subs.find((s) => s.questId === questId) ?? null;
         setSubmission(sub);
+
+        // Lock check — redirect if prerequisite not met
+        if (!isPrivileged && q?.prerequisiteQuestId) {
+          const prereqMet = subs.some(
+            (s) => s.questId === q.prerequisiteQuestId && s.status === "approved",
+          );
+          if (!prereqMet) {
+            router.replace("/quests");
+            return;
+          }
+        }
         // Fetch attribution profiles in parallel
         const profileFetches: Promise<void>[] = [];
         if (q?.createdBy) {

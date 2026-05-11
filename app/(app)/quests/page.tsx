@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Compass, Search, Clock, CheckCircle2, RotateCcw, BookOpen } from "lucide-react";
+import { Compass, Search, Clock, CheckCircle2, RotateCcw, BookOpen, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getSubmissionsByTeam, getUserPublicProfiles, type UserPublicProfile } from "@/lib/firestore";
 import { SkeletonCard } from "@/components/shared/Skeleton";
@@ -74,6 +74,23 @@ export default function QuestsPage() {
   // Map questId → submission
   const subMap = new Map(submissions.map((s) => [s.questId, s]));
 
+  // Set of approved quest IDs for lock check
+  const approvedQuestIds = new Set(
+    submissions.filter((s) => s.status === "approved").map((s) => s.questId),
+  );
+
+  // admins/super_admin see all quests as unlocked
+  const isPrivileged = role === "admin" || role === "super_admin";
+
+  function isLocked(quest: Quest): boolean {
+    if (isPrivileged) return false;
+    if (!quest.prerequisiteQuestId) return false;
+    return !approvedQuestIds.has(quest.prerequisiteQuestId);
+  }
+
+  // Quest title lookup for prerequisite label
+  const questTitleMap = new Map(quests.map((q) => [q.id, q.title]));
+
   const filtered = quests.filter((q) => {
     const sub = subMap.get(q.id);
     if (filter === "all") return true;
@@ -136,18 +153,18 @@ export default function QuestsPage() {
               const StatusIcon = statusCfg?.icon;
               const delayMs = Math.min(idx * 75, 300);
               const delayClass = delayMs > 0 ? `animation-delay-${delayMs}` : "";
-              return (
-                <button
-                  key={quest.id}
-                  type="button"
-                  onClick={() => router.push(`/quests/detail?id=${quest.id}`)}
+              const locked = isLocked(quest);
+              const prereqTitle = quest.prerequisiteQuestId ? questTitleMap.get(quest.prerequisiteQuestId) : null;
+
+              const card = (
+                <div
                   className={cn(
-                    "flex flex-col h-full w-full overflow-hidden rounded-2xl border bg-white shadow-sm text-left hover:shadow-md transition-shadow",
-                    gridView.inView && `animate-fade-in-up ${delayClass}`
+                    "flex flex-col h-full w-full overflow-hidden rounded-2xl border bg-white shadow-sm text-left",
+                    locked ? "opacity-60" : "hover:shadow-md transition-shadow",
                   )}
                 >
-                  {/* Thumbnail — fixed aspect ratio regardless of image */}
-                  <div className="aspect-video w-full overflow-hidden rounded-t-xl shrink-0">
+                  {/* Thumbnail */}
+                  <div className="relative aspect-video w-full overflow-hidden rounded-t-xl shrink-0">
                     {quest.thumbnailUrl ? (
                       <>
                         <img
@@ -167,15 +184,20 @@ export default function QuestsPage() {
                     ) : (
                       <ThumbnailPlaceholder />
                     )}
+                    {/* Lock overlay */}
+                    {locked && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <Lock size={32} className="text-white drop-shadow-lg" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Content */}
                   <div className="flex flex-col flex-1 p-5">
-                    {/* Top */}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h2 className="font-semibold text-gray-900">{quest.title}</h2>
-                        {statusCfg && StatusIcon && (
+                        {statusCfg && StatusIcon && !locked && (
                           <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", statusCfg.color)}>
                             <StatusIcon size={11} />
                             {statusCfg.label}
@@ -183,17 +205,32 @@ export default function QuestsPage() {
                         )}
                       </div>
                       <p className="mt-1.5 text-sm text-gray-500 line-clamp-2">{quest.description}</p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                        <span className="font-medium text-yellow-600">{quest.xpReward} XP</span>
-                        {quest.badgeReward && (
-                          <span className="text-purple-500">{quest.badgeReward}</span>
-                        )}
-                        <DeadlineBadge deadline={quest.deadline} />
-                      </div>
+
+                      {locked && prereqTitle ? (
+                        <p className="mt-2 text-xs text-gray-400 flex items-center gap-1">
+                          <Lock size={11} />
+                          ต้องผ่าน: <span className="font-medium">{prereqTitle}</span>
+                        </p>
+                      ) : (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                          <span className="font-medium text-yellow-600">{quest.xpReward} XP</span>
+                          {quest.badgeReward && (
+                            <span className="text-purple-500">{quest.badgeReward}</span>
+                          )}
+                          <DeadlineBadge deadline={quest.deadline} />
+                        </div>
+                      )}
+
+                      {locked && (
+                        <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+                          <Lock size={10} />
+                          ล็อค
+                        </div>
+                      )}
                     </div>
 
-                    {/* Bottom — pinned to card edge */}
-                    {(() => {
+                    {/* Creator — only when not locked */}
+                    {!locked && (() => {
                       const cp = creatorProfiles.get(quest.createdBy);
                       if (!cp) return null;
                       return (
@@ -207,6 +244,31 @@ export default function QuestsPage() {
                       );
                     })()}
                   </div>
+                </div>
+              );
+
+              if (locked) {
+                return (
+                  <div
+                    key={quest.id}
+                    className={cn(gridView.inView && `animate-fade-in-up ${delayClass}`)}
+                  >
+                    {card}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={quest.id}
+                  type="button"
+                  onClick={() => router.push(`/quests/detail?id=${quest.id}`)}
+                  className={cn(
+                    "flex flex-col h-full w-full text-left",
+                    gridView.inView && `animate-fade-in-up ${delayClass}`,
+                  )}
+                >
+                  {card}
                 </button>
               );
             })}

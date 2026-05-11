@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, BookOpen, ImagePlus, X, ClipboardList, Gift } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, BookOpen, ImagePlus, X, ClipboardList, Gift, Lock } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { DeadlineBadge } from "@/components/shared/DeadlineBadge";
 import { useAuth } from "@/lib/auth-context";
@@ -11,8 +11,8 @@ import { uploadQuestThumbnail, uploadRewardImage } from "@/lib/storage";
 import type { Quest, QuestStatus, RewardType } from "@/types";
 import { cn } from "@/lib/utils";
 import { Timestamp } from "firebase/firestore";
-import { getFunctions, httpsCallable } from "firebase/functions";
-import app from "@/lib/firebase";
+import { getIdToken } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 type Toast = { type: "success" | "error"; message: string };
 
@@ -39,6 +39,7 @@ interface QuestFormData {
   rewardType: RewardType | "";
   rewardTitle: string;
   rewardDescription: string;
+  prerequisiteQuestId: string;
 }
 
 const EMPTY_FORM: QuestFormData = {
@@ -52,6 +53,7 @@ const EMPTY_FORM: QuestFormData = {
   rewardType: "",
   rewardTitle: "",
   rewardDescription: "",
+  prerequisiteQuestId: "",
 };
 
 export default function AdminQuestsPage() {
@@ -143,6 +145,7 @@ export default function AdminQuestsPage() {
       rewardType: quest.rewardType ?? "",
       rewardTitle: quest.rewardTitle ?? "",
       rewardDescription: quest.rewardDescription ?? "",
+      prerequisiteQuestId: quest.prerequisiteQuestId ?? "",
     });
     setThumbnailFile(null);
     setThumbnailPreview(null);
@@ -212,20 +215,32 @@ export default function AdminQuestsPage() {
       reader.readAsDataURL(file);
     });
 
-    const functions = getFunctions(app, "asia-southeast1");
-    const uploadFn = httpsCallable<
-      { questId: string; questTitle: string; fileBase64: string; fileName: string; mimeType: string },
-      { driveFileId: string; driveFileUrl: string }
-    >(functions, "uploadQuestImage");
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error("Not authenticated");
+    const idToken = await getIdToken(currentUser);
 
-    const result = await uploadFn({
-      questId,
-      questTitle,
-      fileBase64: base64,
-      fileName: file.name,
-      mimeType: file.type,
-    });
-    return result.data;
+    const res = await fetch(
+      "/api/uploadQuestImage",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          questId,
+          questTitle,
+          fileBase64: base64,
+          fileName: file.name,
+          mimeType: file.type,
+        }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error ?? "Upload failed");
+    }
+    return res.json() as Promise<{ driveFileId: string; driveFileUrl: string }>;
   }
 
   async function handleSave() {
@@ -253,6 +268,7 @@ export default function AdminQuestsPage() {
         rewardTitle: form.rewardType && form.rewardTitle.trim() ? form.rewardTitle.trim() : null,
         rewardDescription: form.rewardType && form.rewardDescription.trim() ? form.rewardDescription.trim() : null,
         rewardImageUrl: form.rewardType ? (existingRewardImageUrl ?? null) : null,
+        prerequisiteQuestId: form.prerequisiteQuestId || null,
       };
 
       let uploadWarning = false;
@@ -436,7 +452,14 @@ export default function AdminQuestsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{quest.title}</div>
+                      <div className="flex items-center gap-1.5 font-medium text-gray-900">
+                        {quest.title}
+                        {quest.prerequisiteQuestId && (
+                          <span title={`ต้องผ่าน: ${quests.find(q => q.id === quest.prerequisiteQuestId)?.title ?? quest.prerequisiteQuestId}`}>
+                            <Lock size={12} className="text-gray-400 shrink-0" />
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-400 mt-0.5 line-clamp-1">{quest.description}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap font-semibold text-yellow-600">{quest.xpReward} XP</td>
@@ -637,6 +660,23 @@ export default function AdminQuestsPage() {
                   <option value="draft">ร่าง</option>
                   <option value="active">เปิดอยู่</option>
                   <option value="closed">ปิดแล้ว</option>
+                </select>
+              </div>
+
+              {/* Prerequisite quest */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">ต้องทำภารกิจก่อนหน้า</label>
+                <select
+                  value={form.prerequisiteQuestId}
+                  onChange={(e) => setForm((f) => ({ ...f, prerequisiteQuestId: e.target.value }))}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#274897] focus:ring-2 focus:ring-[#274897]/20"
+                >
+                  <option value="">ไม่มี (เปิดให้ทำได้เลย)</option>
+                  {quests
+                    .filter((q) => !editingQuest || q.id !== editingQuest.id)
+                    .map((q) => (
+                      <option key={q.id} value={q.id}>{q.title}</option>
+                    ))}
                 </select>
               </div>
 
