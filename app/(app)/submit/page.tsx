@@ -40,7 +40,7 @@ function SubmitForm() {
   const questId = searchParams.get("id") ?? "";
 
   useEffect(() => {
-    if (role === "admin") router.replace("/home");
+    if (role === "admin" || role === "super_admin") router.replace("/home");
   }, [role, router]);
 
   const [quest, setQuest] = useState<Quest | null>(null);
@@ -123,7 +123,7 @@ function SubmitForm() {
     }
   }
 
-  if (role === "admin") {
+  if (role === "admin" || role === "super_admin") {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <p className="text-sm text-red-500 font-medium">แอดมินไม่สามารถส่งภารกิจได้</p>

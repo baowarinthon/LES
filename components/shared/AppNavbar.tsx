@@ -43,8 +43,8 @@ export function AppNavbar() {
 
   const menuItems = [
     { icon: Settings, label: "ตั้งค่าทีม", href: "/settings", show: true },
-    { icon: LayoutDashboard, label: "Admin Panel", href: "/admin", show: role === "admin" },
-    { icon: BarChart2, label: "Executive Dashboard", href: "/executive/dashboard", show: role === "admin" },
+    { icon: LayoutDashboard, label: "Admin Panel", href: "/admin", show: role === "admin" || role === "super_admin" },
+    { icon: BarChart2, label: "Executive Dashboard", href: "/executive/dashboard", show: role === "admin" || role === "super_admin" },
   ].filter((item) => item.show);
 
   return (

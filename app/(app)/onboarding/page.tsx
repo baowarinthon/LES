@@ -26,7 +26,7 @@ export default function OnboardingPage() {
   const { user, role, refreshUser } = useAuth();
   const router = useRouter();
 
-  const isAdmin = role === "admin";
+  const isAdmin = role === "admin" || role === "super_admin";
   const TOTAL_STEPS = isAdmin ? 2 : 3;
 
   const [step, setStep] = useState(1);

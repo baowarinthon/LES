@@ -349,7 +349,7 @@ export async function getPublicStats(): Promise<PublicStats> {
 
 export async function updatePublicStats(): Promise<void> {
   const [usersSnap, questsSnap] = await Promise.all([
-    getDocs(query(collection(db, "users"), where("role", "in", ["employee", "admin"]))),
+    getDocs(query(collection(db, "users"), where("role", "in", ["employee", "admin", "super_admin"]))),
     getDocs(query(collection(db, "quests"), where("status", "==", "active"))),
   ]);
   const airports = new Set<string>();

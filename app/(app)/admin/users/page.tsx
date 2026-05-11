@@ -13,20 +13,24 @@ const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Admin",
   executive: "Executive",
   employee: "Employee",
+  super_admin: "Super Admin",
 };
 
 const ROLE_COLORS: Record<UserRole, string> = {
   admin: "bg-blue-100 text-blue-700",
   executive: "bg-purple-100 text-purple-700",
   employee: "bg-gray-100 text-gray-600",
+  super_admin: "bg-[#1E3A8A] text-white",
 };
 
 export default function AdminUsersPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, role: currentRole } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
+
+  const isSuperAdmin = currentRole === "super_admin";
 
   function showToast(type: Toast["type"], message: string) {
     setToast({ type, message });
@@ -74,7 +78,7 @@ export default function AdminUsersPage() {
               <thead>
                 <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                   <th className="px-4 py-3">รูป</th>
-                  <th className="px-4 py-3">ชื่อทีม</th>
+                  <th className="px-4 py-3">ชื่อทีม / อีเมล</th>
                   <th className="px-4 py-3">สนามบิน</th>
                   <th className="px-4 py-3">สมาชิก</th>
                   <th className="px-4 py-3">XP</th>
@@ -86,6 +90,10 @@ export default function AdminUsersPage() {
                 {users.map((u) => {
                   const isSelf = u.uid === currentUser?.uid;
                   const isUpdating = updatingRole === u.uid;
+                  const targetIsSuperAdmin = u.role === "super_admin";
+                  // Only super_admin can manage another super_admin; regular admin cannot touch them
+                  const canManage = !isSelf && (!targetIsSuperAdmin || isSuperAdmin);
+
                   return (
                     <tr key={u.uid} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
@@ -101,7 +109,12 @@ export default function AdminUsersPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{u.teamName}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900">{u.teamName}</p>
+                        {u.email && (
+                          <p className="text-xs text-gray-400 mt-0.5">{u.email}</p>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-gray-500">{u.airport || "—"}</td>
                       <td className="px-4 py-3 text-gray-500">
                         {u.memberNames?.length ? u.memberNames.join(", ") : "—"}
@@ -115,23 +128,29 @@ export default function AdminUsersPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="relative inline-block">
-                          <select
-                            value={u.role}
-                            disabled={isSelf || isUpdating}
-                            onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
-                            className={cn(
-                              "appearance-none rounded-lg border border-gray-200 bg-white py-1 pl-2.5 pr-7 text-xs font-medium text-gray-700 outline-none transition-colors hover:border-gray-300 focus:border-[#274897] focus:ring-2 focus:ring-[#274897]/20",
-                              (isSelf || isUpdating) && "cursor-not-allowed opacity-50",
-                            )}
-                          >
-                            <option value="employee">Employee</option>
-                            <option value="executive">Executive</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                        </div>
-                        {isSelf && <span className="ml-2 text-xs text-gray-400">ตัวเอง</span>}
+                        {canManage ? (
+                          <div className="relative inline-block">
+                            <select
+                              value={u.role}
+                              disabled={isUpdating}
+                              onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
+                              className={cn(
+                                "appearance-none rounded-lg border border-gray-200 bg-white py-1 pl-2.5 pr-7 text-xs font-medium text-gray-700 outline-none transition-colors hover:border-gray-300 focus:border-[#274897] focus:ring-2 focus:ring-[#274897]/20",
+                                isUpdating && "cursor-not-allowed opacity-50",
+                              )}
+                            >
+                              <option value="employee">Employee</option>
+                              <option value="executive">Executive</option>
+                              <option value="admin">Admin</option>
+                              {isSuperAdmin && <option value="super_admin">Super Admin</option>}
+                            </select>
+                            <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">
+                            {isSelf ? "ตัวเอง" : "—"}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

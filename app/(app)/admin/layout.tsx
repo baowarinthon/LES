@@ -25,11 +25,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
 
+  const isAdmin = role === "admin" || role === "super_admin";
+
   useEffect(() => {
-    if (!loading && role !== "admin") {
+    if (!loading && !isAdmin) {
       router.replace("/home");
     }
-  }, [role, loading, router]);
+  }, [isAdmin, loading, router]);
 
   if (loading) {
     return (
@@ -39,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (role !== "admin") return null;
+  if (!isAdmin) return null;
 
   // Sync public landing page stats once per admin session
   updatePublicStats().catch(console.error);
